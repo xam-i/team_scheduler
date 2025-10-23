@@ -1,37 +1,49 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/user_model.dart';
+import '../storage/local_storage.dart';
 
 class UserRepository {
   final SupabaseClient _client = SupabaseConfig.client;
   final _storage = SupabaseConfig.storage;
 
   Future<UserModel?> getCurrentUser() async {
-    final user = _client.auth.currentUser;
-    if (user == null) return null;
+    // Check local storage first
+    final localUser = AppLocalStorage().getCurrentUser();
+    if (localUser != null) return localUser;
 
-    final response = await _client
-        .from('users')
-        .select()
-        .eq('id', user.id)
-        .single();
-
-    return UserModel.fromJson(response);
+    // For this demo, we'll create a mock user since we don't have authentication set up
+    // In a real app, you would use Supabase auth
+    return null; // This will trigger the onboarding flow
   }
 
   Future<UserModel> createUser({required String name, String? photoUrl}) async {
-    final user = _client.auth.currentUser;
-    if (user == null) throw Exception('No authenticated user');
+    try {
+      // Generate a mock user ID for demo purposes
+      final userId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    final userData = {'id': user.id, 'name': name, 'photo_url': photoUrl};
+      final userData = {'id': userId, 'name': name, 'photo_url': photoUrl};
 
-    final response = await _client
-        .from('users')
-        .insert(userData)
-        .select()
-        .single();
+      final response = await _client
+          .from('users')
+          .insert(userData)
+          .select()
+          .single();
 
-    return UserModel.fromJson(response);
+      return UserModel.fromJson(response);
+    } catch (e) {
+      // If database is not available, create a local user for demo
+      print('Database error: $e. Creating local user for demo.');
+      final userId = DateTime.now().millisecondsSinceEpoch.toString();
+      final user = UserModel(
+        id: userId,
+        name: name,
+        photoUrl: photoUrl,
+        createdAt: DateTime.now(),
+      );
+      AppLocalStorage().addUser(user);
+      return user;
+    }
   }
 
   Future<UserModel> updateUser({
@@ -54,18 +66,29 @@ class UserRepository {
   }
 
   Future<List<UserModel>> getAllUsers() async {
-    final response = await _client.from('users').select().order('name');
-
-    return (response as List).map((json) => UserModel.fromJson(json)).toList();
+    try {
+      final response = await _client.from('users').select().order('name');
+      return (response as List)
+          .map((json) => UserModel.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Database error: $e. Returning local users for demo.');
+      return AppLocalStorage().getAllUsers();
+    }
   }
 
   Future<String> uploadPhoto(String filePath, List<int> fileBytes) async {
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    await _storage
-        .from(SupabaseConfig.storageBucket)
-        .uploadBinary(fileName, fileBytes);
+      await _storage
+          .from(SupabaseConfig.storageBucket)
+          .uploadBinary(fileName, fileBytes);
 
-    return _storage.from(SupabaseConfig.storageBucket).getPublicUrl(fileName);
+      return _storage.from(SupabaseConfig.storageBucket).getPublicUrl(fileName);
+    } catch (e) {
+      print('Storage error: $e. Photo upload failed.');
+      return ''; // Return empty string if upload fails
+    }
   }
 }

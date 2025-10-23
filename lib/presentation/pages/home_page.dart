@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Team Scheduler'),
-        backgroundColor: Colors.blue,
+        backgroundColor: const Color(0xFF8B5CF6),
         foregroundColor: Colors.white,
         actions: [
           BlocBuilder<UserCubit, UserState>(
