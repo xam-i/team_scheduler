@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/bloc/availability_cubit.dart';
 import '../../core/bloc/user_cubit.dart';
+import '../../core/utils/error_handler.dart';
 
 class AddAvailabilityPage extends StatefulWidget {
   const AddAvailabilityPage({super.key});
@@ -94,8 +95,25 @@ class _AddAvailabilityPageState extends State<AddAvailabilityPage> {
 
     if (endDateTime.isBefore(startDateTime) ||
         endDateTime.isAtSameMomentAs(startDateTime)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('End time must be after start time')),
+      ErrorHandler.showError(context, 'End time must be after start time');
+      return;
+    }
+
+    // Validate that the duration is at least 15 minutes
+    final duration = endDateTime.difference(startDateTime);
+    if (duration.inMinutes < 15) {
+      ErrorHandler.showError(
+        context,
+        'Availability slot must be at least 15 minutes long',
+      );
+      return;
+    }
+
+    // Validate that the slot is not in the past
+    if (startDateTime.isBefore(DateTime.now())) {
+      ErrorHandler.showError(
+        context,
+        'Cannot add availability slots in the past',
       );
       return;
     }
@@ -113,16 +131,14 @@ class _AddAvailabilityPageState extends State<AddAvailabilityPage> {
           endTime: endDateTime,
         );
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Availability added successfully')),
-        );
-
+        ErrorHandler.showSuccess(context, 'Availability added successfully!');
         Navigator.of(context).pop(true);
       }
     } catch (e) {
-      ScaffoldMessenger.of(
+      ErrorHandler.showError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        'Failed to add availability. Please try again.',
+      );
     } finally {
       setState(() {
         _isLoading = false;

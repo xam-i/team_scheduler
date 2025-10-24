@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/availability_model.dart';
+import '../storage/local_storage.dart';
 
 class AvailabilityRepository {
   final SupabaseClient _client = SupabaseConfig.client;
@@ -17,8 +18,9 @@ class AvailabilityRepository {
           .map((json) => AvailabilityModel.fromJson(json))
           .toList();
     } catch (e) {
-      print('Database error: $e. Returning empty availability list for demo.');
-      return [];
+      // If database is not available, return local availability for demo
+      // In production, you might want to log this error
+      return AppLocalStorage().getUserAvailability(userId);
     }
   }
 
@@ -42,39 +44,53 @@ class AvailabilityRepository {
 
       return AvailabilityModel.fromJson(response);
     } catch (e) {
-      print('Database error: $e. Creating local availability for demo.');
-      // Create a local availability model for demo
-      return AvailabilityModel(
+      // If database is not available, create a local availability model for demo
+      // In production, you might want to log this error
+      final availability = AvailabilityModel(
         id: DateTime.now().millisecondsSinceEpoch,
         userId: userId,
         startTime: startTime,
         endTime: endTime,
         createdAt: DateTime.now(),
       );
+      AppLocalStorage().addAvailability(availability); // Add to local storage
+      return availability;
     }
   }
 
   Future<void> deleteAvailability(int id) async {
-    await _client.from('availability').delete().eq('id', id);
+    try {
+      await _client.from('availability').delete().eq('id', id);
+    } catch (e) {
+      // If database is not available, delete from local storage for demo
+      // In production, you might want to log this error
+      AppLocalStorage().deleteAvailability(id);
+    }
   }
 
   Future<List<AvailabilityModel>> getMultipleUsersAvailability(
     List<String> userIds,
   ) async {
-    // For multiple users, we'll get all availability and filter in memory
-    // This is not optimal but works for the demo
-    final response = await _client
-        .from('availability')
-        .select()
-        .order('start_time');
+    try {
+      // For multiple users, we'll get all availability and filter in memory
+      // This is not optimal but works for the demo
+      final response = await _client
+          .from('availability')
+          .select()
+          .order('start_time');
 
-    final allAvailabilities = (response as List)
-        .map((json) => AvailabilityModel.fromJson(json))
-        .toList();
+      final allAvailabilities = (response as List)
+          .map((json) => AvailabilityModel.fromJson(json))
+          .toList();
 
-    // Filter by user IDs
-    return allAvailabilities
-        .where((availability) => userIds.contains(availability.userId))
-        .toList();
+      // Filter by user IDs
+      return allAvailabilities
+          .where((availability) => userIds.contains(availability.userId))
+          .toList();
+    } catch (e) {
+      // If database is not available, return local availabilities for demo
+      // In production, you might want to log this error
+      return AppLocalStorage().getMultipleUsersAvailability(userIds);
+    }
   }
 }

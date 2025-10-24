@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/bloc/availability_cubit.dart';
 import '../../core/bloc/user_cubit.dart';
+import '../../core/utils/error_handler.dart';
 import 'add_availability_page.dart';
 
 class AvailabilityPage extends StatefulWidget {
@@ -28,28 +29,27 @@ class _AvailabilityPageState extends State<AvailabilityPage> {
   }
 
   Future<void> _deleteAvailability(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Availability'),
-        content: const Text(
-          'Are you sure you want to delete this availability slot?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await ErrorHandler.showConfirmationDialog(
+      context,
+      title: 'Delete Availability',
+      message: 'Are you sure you want to delete this availability slot?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
     );
 
-    if (confirmed == true) {
-      context.read<AvailabilityCubit>().deleteAvailability(id);
+    if (confirmed == true && mounted) {
+      try {
+        await context.read<AvailabilityCubit>().deleteAvailability(id);
+        ErrorHandler.showSuccess(
+          context,
+          'Availability slot deleted successfully.',
+        );
+      } catch (e) {
+        ErrorHandler.showError(
+          context,
+          'Failed to delete availability slot. Please try again.',
+        );
+      }
     }
   }
 

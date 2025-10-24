@@ -63,7 +63,7 @@ class AppLocalStorage {
     return _availabilities.where((a) => userIds.contains(a.userId)).toList();
   }
 
-  void removeAvailability(int id) {
+  void deleteAvailability(int id) {
     _availabilities.removeWhere((a) => a.id == id);
   }
 
@@ -84,7 +84,7 @@ class AppLocalStorage {
         .toList();
   }
 
-  void removeTask(int taskId) {
+  void deleteTask(int taskId) {
     _tasks.removeWhere((t) => t.id == taskId);
   }
 }

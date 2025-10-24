@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../../core/bloc/user_cubit.dart';
 import '../../core/repositories/user_repository.dart';
+import '../../core/utils/error_handler.dart';
+import '../../core/config/app_config.dart';
 import 'home_page.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -42,9 +44,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
+      ErrorHandler.showError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+        'Failed to pick image. Please try again.',
+      );
     }
   }
 
@@ -74,14 +77,19 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
       // Navigate to home page after successful user creation
       if (mounted) {
+        ErrorHandler.showSuccess(
+          context,
+          'Welcome! Your account has been created successfully.',
+        );
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
+      ErrorHandler.showError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error creating user: $e')));
+        'Failed to create account. Please try again.',
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -148,7 +156,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               border: Border.all(color: Colors.white, width: 4),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   blurRadius: 10,
                                   offset: const Offset(0, 5),
                                 ),
@@ -156,7 +164,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             ),
                             child: CircleAvatar(
                               radius: 60,
-                              backgroundColor: Colors.white.withOpacity(0.2),
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.2,
+                              ),
                               backgroundImage: _selectedImageBytes != null
                                   ? MemoryImage(_selectedImageBytes!)
                                   : null,
@@ -205,7 +215,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 5),
                           ),
@@ -228,6 +238,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           if (value == null || value.trim().isEmpty) {
                             return 'Please enter your name';
                           }
+                          if (value.trim().length < AppConfig.minNameLength) {
+                            return 'Name must be at least ${AppConfig.minNameLength} characters long';
+                          }
+                          if (value.trim().length > AppConfig.maxNameLength) {
+                            return 'Name must be less than ${AppConfig.maxNameLength} characters';
+                          }
                           return null;
                         },
                       ),
@@ -247,7 +263,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: 8,
-                          shadowColor: Colors.black.withOpacity(0.3),
+                          shadowColor: Colors.black.withValues(alpha: 0.3),
                         ),
                         child: _isLoading
                             ? const CircularProgressIndicator(

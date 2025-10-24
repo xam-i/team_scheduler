@@ -5,6 +5,7 @@ import '../../core/bloc/availability_cubit.dart';
 import '../../core/bloc/task_cubit.dart';
 import '../../core/services/slot_finder_service.dart';
 import '../../core/models/availability_model.dart';
+import '../../core/utils/error_handler.dart';
 
 class CreateTaskPage extends StatefulWidget {
   const CreateTaskPage({super.key});
@@ -172,9 +173,10 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
+      ErrorHandler.showError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error loading slots: $e')));
+        'Failed to load available time slots. Please try again.',
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -206,15 +208,13 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         endTime: _selectedSlot!.endTime,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task created successfully')),
-      );
-
+      ErrorHandler.showSuccess(context, 'Task created successfully!');
       Navigator.of(context).pop(true);
     } catch (e) {
-      ScaffoldMessenger.of(
+      ErrorHandler.showError(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error creating task: $e')));
+        'Failed to create task. Please try again.',
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -227,7 +227,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Create Task - Step ${_currentStep + 1}/4'),
-        backgroundColor: Colors.blue,
+        backgroundColor: const Color(0xFF8B5CF6),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.close),
@@ -240,7 +240,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
           LinearProgressIndicator(
             value: (_currentStep + 1) / 4,
             backgroundColor: Colors.grey[300],
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
           ),
           const SizedBox(height: 16),
 
@@ -286,7 +286,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                         ? _nextStep
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: const Color(0xFF8B5CF6),
                       foregroundColor: Colors.white,
                     ),
                     child: _isLoading
@@ -327,6 +327,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter a task title';
                 }
+                if (value.trim().length < 3) {
+                  return 'Title must be at least 3 characters long';
+                }
+                if (value.trim().length > 100) {
+                  return 'Title must be less than 100 characters';
+                }
                 return null;
               },
             ),
@@ -340,6 +346,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                 prefixIcon: Icon(Icons.description),
               ),
               maxLines: 3,
+              validator: (value) {
+                if (value != null && value.trim().length > 500) {
+                  return 'Description must be less than 500 characters';
+                }
+                return null;
+              },
             ),
           ],
         ),

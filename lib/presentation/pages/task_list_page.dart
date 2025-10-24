@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/bloc/task_cubit.dart';
 import '../../core/bloc/user_cubit.dart';
 import '../../core/models/task_model.dart';
+import '../../core/utils/error_handler.dart';
 import 'create_task_page.dart';
 
 enum TaskFilter { all, created, mine }
@@ -63,26 +64,25 @@ class _TaskListPageState extends State<TaskListPage> {
   }
 
   Future<void> _deleteTask(int taskId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await ErrorHandler.showConfirmationDialog(
+      context,
+      title: 'Delete Task',
+      message:
+          'Are you sure you want to delete this task? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
     );
 
-    if (confirmed == true) {
-      context.read<TaskCubit>().deleteTask(taskId);
+    if (confirmed == true && mounted) {
+      try {
+        await context.read<TaskCubit>().deleteTask(taskId);
+        ErrorHandler.showSuccess(context, 'Task deleted successfully.');
+      } catch (e) {
+        ErrorHandler.showError(
+          context,
+          'Failed to delete task. Please try again.',
+        );
+      }
     }
   }
 
@@ -114,7 +114,7 @@ class _TaskListPageState extends State<TaskListPage> {
                   icon: const Icon(Icons.add),
                   label: const Text('Add Task'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color(0xFF8B5CF6),
                     foregroundColor: Colors.white,
                   ),
                 ),

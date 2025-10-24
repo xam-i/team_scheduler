@@ -73,11 +73,10 @@ class MainApp extends StatelessWidget {
           ),
           cardTheme: CardThemeData(
             elevation: 2,
-            color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide.none,
             ),
+            color: Colors.white,
           ),
           inputDecorationTheme: InputDecorationTheme(
             border: OutlineInputBorder(

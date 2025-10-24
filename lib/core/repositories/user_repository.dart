@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
+import '../config/app_config.dart';
 import '../models/user_model.dart';
 import '../storage/local_storage.dart';
 
@@ -33,7 +34,7 @@ class UserRepository {
       return UserModel.fromJson(response);
     } catch (e) {
       // If database is not available, create a local user for demo
-      print('Database error: $e. Creating local user for demo.');
+      // In production, you might want to log this error
       final userId = DateTime.now().millisecondsSinceEpoch.toString();
       final user = UserModel(
         id: userId,
@@ -72,7 +73,8 @@ class UserRepository {
           .map((json) => UserModel.fromJson(json))
           .toList();
     } catch (e) {
-      print('Database error: $e. Returning local users for demo.');
+      // If database is not available, return local users for demo
+      // In production, you might want to log this error
       return AppLocalStorage().getAllUsers();
     }
   }
@@ -82,12 +84,13 @@ class UserRepository {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       await _storage
-          .from(SupabaseConfig.storageBucket)
+          .from(AppConfig.storageBucket)
           .uploadBinary(fileName, fileBytes);
 
-      return _storage.from(SupabaseConfig.storageBucket).getPublicUrl(fileName);
+      return _storage.from(AppConfig.storageBucket).getPublicUrl(fileName);
     } catch (e) {
-      print('Storage error: $e. Photo upload failed.');
+      // Storage error - return empty string if upload fails
+      // In production, you might want to log this error
       return ''; // Return empty string if upload fails
     }
   }

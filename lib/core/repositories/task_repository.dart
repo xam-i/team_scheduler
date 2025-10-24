@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/task_model.dart';
+import '../storage/local_storage.dart';
 
 class TaskRepository {
   final SupabaseClient _client = SupabaseConfig.client;
@@ -28,30 +29,40 @@ class TaskRepository {
         });
       }).toList();
     } catch (e) {
-      print('Database error: $e. Returning empty task list for demo.');
-      return [];
+      // If database is not available, return local tasks for demo
+      // In production, you might want to log this error
+      return AppLocalStorage().getAllTasks();
     }
   }
 
   Future<List<TaskModel>> getUserTasks(String userId) async {
-    final response = await _client
-        .from('tasks')
-        .select('''
-          *,
-          task_collaborators(user_id)
-        ''')
-        .or('created_by.eq.$userId,task_collaborators.user_id.eq.$userId')
-        .order('created_at', ascending: false);
+    try {
+      final response = await _client
+          .from('tasks')
+          .select('''
+            *,
+            task_collaborators(user_id)
+          ''')
+          .or('created_by.eq.$userId,task_collaborators.user_id.eq.$userId')
+          .order('created_at', ascending: false);
 
-    return (response as List).map((json) {
-      final collaboratorIds =
-          (json['task_collaborators'] as List<dynamic>?)
-              ?.map((c) => c['user_id'] as String)
-              .toList() ??
-          [];
+      return (response as List).map((json) {
+        final collaboratorIds =
+            (json['task_collaborators'] as List<dynamic>?)
+                ?.map((c) => c['user_id'] as String)
+                .toList() ??
+            [];
 
-      return TaskModel.fromJson({...json, 'collaborator_ids': collaboratorIds});
-    }).toList();
+        return TaskModel.fromJson({
+          ...json,
+          'collaborator_ids': collaboratorIds,
+        });
+      }).toList();
+    } catch (e) {
+      // If database is not available, return local user tasks for demo
+      // In production, you might want to log this error
+      return AppLocalStorage().getUserTasks(userId);
+    }
   }
 
   Future<TaskModel> createTask({
@@ -94,9 +105,9 @@ class TaskRepository {
         'collaborator_ids': collaboratorIds,
       });
     } catch (e) {
-      print('Database error: $e. Creating local task for demo.');
-      // Create a local task model for demo
-      return TaskModel(
+      // If database is not available, create a local task model for demo
+      // In production, you might want to log this error
+      final task = TaskModel(
         id: DateTime.now().millisecondsSinceEpoch,
         title: title,
         description: description,
@@ -106,10 +117,18 @@ class TaskRepository {
         createdAt: DateTime.now(),
         collaboratorIds: collaboratorIds,
       );
+      AppLocalStorage().addTask(task); // Add to local storage
+      return task;
     }
   }
 
   Future<void> deleteTask(int taskId) async {
-    await _client.from('tasks').delete().eq('id', taskId);
+    try {
+      await _client.from('tasks').delete().eq('id', taskId);
+    } catch (e) {
+      // If database is not available, delete from local storage for demo
+      // In production, you might want to log this error
+      AppLocalStorage().deleteTask(taskId);
+    }
   }
 }
